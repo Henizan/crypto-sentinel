@@ -2,7 +2,7 @@
 import pandas as pd
 from pathlib import Path
 
-DATA_DIR = Path("C:/ece_B3/projet_agr_crypto/data") # Répertoire des données
+DATA_DIR = Path("C:/ece_B3/pfe/data") # Répertoire des données
 
 files = ["imports/BTCUSD_1d_Binance.csv", "imports/ETHUSD_1d_Binance.csv", "imports/XRPUSD_1d_Binance.csv"] # Liste des fichiers CSV à fusionner
 merged_list = [] # Liste pour stocker les DataFrames fusionnés

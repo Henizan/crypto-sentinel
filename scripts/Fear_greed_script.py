@@ -26,4 +26,4 @@ if __name__ == "__main__": #Exécuter la fonction si le script est exécuté dir
     try:
         scrape_fear_greed_full() #Appeler la fonction pour récupérer et sauvegarder les données
     except Exception as e:
-        print(f"⚠️ Erreur durant la récupération : {e}") #Afficher un message d'erreur en cas d'échec
+        print(f"Erreur durant la récupération : {e}") #Afficher un message d'erreur en cas d'échec

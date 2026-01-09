@@ -1,5 +1,5 @@
  -- vue du btc en fonction du fear and greed
-CREATE or replace VIEW vue_btc_feargreed AS
+create VIEW vue_btc_feargreed AS
 SELECT -- Sélection des colonnes pertinentes
     o.open_time::date AS date, -- Conversion en date
     o.open, o.high, o.low, o.close, o.volume, -- Données OHLCV
