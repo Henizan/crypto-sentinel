@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>CryptoSentinel AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">🛡 CryptoSentinel AI</div>
+    <button class="menu active" data-page="dashboard">Tableau de Bord</button>
+    <button class="menu" data-page="sentinelles">Sentinelles</button>
+    <button class="menu" data-page="config">Config</button>
+    <button class="menu" data-page="profil">Profil</button>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="dashboard">
+      <section class="top">
+        <div class="stat" id="btcStat">PRIX BTC<br><b>--</b></div>
+        <div class="stat">MARCHÉ<br><b>LIVE</b></div>
+        <div class="stat">IA<br><b>ACTIVE</b></div>
+        <div class="stat">UPDATE<br><b>1 min</b></div>
+      </section>
+      <section class="grid" id="market"></section>
+    </section>
+
+    <!-- SENTINELLES -->
+    <section class="page" id="sentinelles">
+      <h2>🛡 Sentinelles Actives</h2>
+      <p>Analyse automatique des actifs surveillés.</p>
+    </section>
+
+    <!-- CONFIG -->
+    <section class="page" id="config">
+      <h2>⚙️ Configuration</h2>
+      <p>Timeframe, API, alertes (à venir).</p>
+    </section>
+
+    <!-- PROFIL -->
+    <section class="page" id="profil">
+      <h2>👤 Profil Utilisateur</h2>
+
+      <div class="profile-card">
+        <div class="avatar">PHOTO</div>
+
+        <div class="profile-info">
+          <label>Nom</label>
+          <input type="text" id="name" placeholder="Ton nom">
+
+          <label>Email</label>
+          <input type="email" id="email" placeholder="email@email.com">
+
+          <label>Stratégie</label>
+          <select id="strategy">
+            <option>Conservatrice</option>
+            <option>Agressive</option>
+            <option>Scalping</option>
+            <option>Swing</option>
+          </select>
+
+          <button id="saveProfile">💾 Sauvegarder</button>
+          <p id="profileStatus"></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
