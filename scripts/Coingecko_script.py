@@ -18,7 +18,7 @@ logger = setup_logger("coingecko_prices")
 headers = {"accept": "application/json", "x-cg-demo-api-key": COINGECKO_API_KEY}
 
 def get_market_chart_segment(coin_id, vs_currency):
-    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart?vs_currency={vs_currency}&days=90"
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart?vs_currency={vs_currency}&days=2"
     r = requests.get(url, headers=headers)
     r.raise_for_status()
     data = r.json()
