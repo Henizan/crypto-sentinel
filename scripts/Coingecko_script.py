@@ -7,6 +7,11 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database_manager import save_to_postgres
 from config import COINGECKO_API_KEY
+# Import du logger
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+from logger_config import setup_logger
+
+logger = setup_logger("coingecko_prices")
 
 # --- Configuration de l'API CoinGecko ---
 # On prépare l'en-tête avec la clé API pour s'authentifier
@@ -45,11 +50,11 @@ def get_full_history(coin_id, symbol):
         df["Crypto"] = symbol
         return df
     except Exception as e:
-        print(f"Error fetching {coin_id}: {e}")
+        logger.error(f"Error fetching {coin_id}: {e}", exc_info=True)
         return pd.DataFrame()
 
 def fetch_and_store_prices():
-    print("Récupération des données Coingecko...")
+    logger.info("Récupération des données Coingecko...")
     cryptos = {
         "bitcoin": "BTC",
         "ethereum": "ETH",
@@ -59,12 +64,12 @@ def fetch_and_store_prices():
 
     frames = [get_full_history(cid, sym) for cid, sym in cryptos.items()]
     if not frames:
-        print("No data fetched.")
+        logger.warning("No data fetched.")
         return
 
     final = pd.concat(frames, ignore_index=True)
     if final.empty:
-        print("Empty dataframe.")
+        logger.warning("Empty dataframe.")
         return
 
     # Renommage des colonnes pour qu'elles correspondent exactement à notre table SQL 'ohlcv'
@@ -85,6 +90,7 @@ def fetch_and_store_prices():
 
     # Sauvegarde finale dans la table 'ohlcv' via notre gestionnaire de base de données
     save_to_postgres(final, "ohlcv")
+    logger.info(f"Données Coingecko insérées : {len(final)} lignes.")
 
 if __name__ == "__main__":
     fetch_and_store_prices()

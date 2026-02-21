@@ -6,6 +6,9 @@ from database_manager import save_to_postgres
 # Importation de la clé API depuis notre fichier de config
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import CRYPTOPANIC_API_KEY
+from logger_config import setup_logger
+
+logger = setup_logger("cryptopanic_news")
 
 # --- Configuration de l'API CryptoPanic ---
 # On définit quels news on veut : monnaies spécifiques, news uniquement (pas de médias), en anglais/français.
@@ -20,7 +23,7 @@ params = {
 
 
 def fetch_cryptopanic_news():
-    print("Récupération des news Cryptopanic...")
+    logger.info("Récupération des news Cryptopanic...")
     try:
         # On interroge l'API CryptoPanic
         response = requests.get(BASE_URL, params=params, timeout=10)
@@ -45,16 +48,17 @@ def fetch_cryptopanic_news():
                 df = pd.DataFrame(new_list)
                 df['published_at'] = pd.to_datetime(df['published_at'])
                 save_to_postgres(df, 'news')
+                logger.info(f"News insérées : {len(df)} articles.")
                 
             else:
-                print("Aucun article important trouvé.")
+                logger.warning("Aucun article important trouvé.")
         else:
-            print(f"Erreur lors de la requête API : Statut {response.status_code}")
+            logger.error(f"Erreur lors de la requête API : Statut {response.status_code}")
 
     except requests.exceptions.RequestException as e:
-        print(f"Erreur de connexion réseau : {e}")
+        logger.error(f"Erreur de connexion réseau : {e}", exc_info=True)
     except Exception as e:
-        print(f"Erreur inattendue : {e}")
+        logger.error(f"Erreur inattendue : {e}", exc_info=True)
 
 if __name__ == "__main__":
     fetch_cryptopanic_news()

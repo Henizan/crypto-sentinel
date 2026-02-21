@@ -12,36 +12,41 @@ from Coingecko_script import fetch_and_store_prices
 from Cryptopanic_news import fetch_cryptopanic_news
 from Fear_greed_script import scrape_fear_greed_full
 
+# Import du logger
+from logger_config import setup_logger
+
+logger = setup_logger("scheduler")
+
 def job_prices():
     # Tâche : Récupération des prix
-    print(f"[{datetime.now()}] Starting Price Collection Job...")
+    logger.info("Starting Price Collection Job...")
     try:
         fetch_and_store_prices()
-        print(f"[{datetime.now()}] Price Collection Job Completed.")
+        logger.info("Price Collection Job Completed.")
     except Exception as e:
-        print(f"[{datetime.now()}] Price Collection Job Failed: {e}")
+        logger.error(f"Price Collection Job Failed: {e}", exc_info=True)
 
 def job_news():
     # Tâche : Récupération des news
-    print(f"[{datetime.now()}] Starting News Collection Job...")
+    logger.info("Starting News Collection Job...")
     try:
         fetch_cryptopanic_news()
-        print(f"[{datetime.now()}] News Collection Job Completed.")
+        logger.info("News Collection Job Completed.")
     except Exception as e:
-        print(f"[{datetime.now()}] News Collection Job Failed: {e}")
+        logger.error(f"News Collection Job Failed: {e}", exc_info=True)
 
 def job_fear_greed():
     # Tâche : Récupération Fear & Greed
-    print(f"[{datetime.now()}] Starting Fear & Greed Collection Job...")
+    logger.info("Starting Fear & Greed Collection Job...")
     try:
         scrape_fear_greed_full()
-        print(f"[{datetime.now()}] Fear & Greed Collection Job Completed.")
+        logger.info("Fear & Greed Collection Job Completed.")
     except Exception as e:
-        print(f"[{datetime.now()}] Fear & Greed Collection Job Failed: {e}")
+        logger.error(f"Fear & Greed Collection Job Failed: {e}", exc_info=True)
 
 def run_all_now():
     # Fonction utilitaire pour tout lancer au démarrage (utile pour tester)
-    print("Running all jobs immediately on startup...")
+    logger.info("Running all jobs immediately on startup...")
     job_prices()
     job_news()
     job_fear_greed()
@@ -57,7 +62,7 @@ schedule.every(8).hours.do(job_news)
 schedule.every(24).hours.do(job_fear_greed)
 
 if __name__ == "__main__":
-    print("Scheduler started...")
+    logger.info("Scheduler started...")
     print("Schedule:")
     print("- Prices: Every 1 hour")
     print("- News: Every 8 hours")
