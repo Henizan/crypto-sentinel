@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg14
+    container_name: cryptosentinel_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cryptosentinel
+    ports:
+      - "5432:5432"  
+    volumes:
+      - ./data/postgres_storage:/var/lib/postgresql/data  
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
