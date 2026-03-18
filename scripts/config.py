@@ -1,28 +1,23 @@
 import os
 from dotenv import load_dotenv
 
-# Chargement des variables d'environnement depuis le fichier .env
-# Cela est crucial pour sécuriser nos mots de passe et clés API.
 load_dotenv()
 
-# --- Configuration de la Base de Données ---
-# On récupère les accès depuis les variables d'environnement.
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+# Si on est sous Windows (local), on utilise 'localhost'
+# Si on est dans Docker, on utilise le nom du service 'db'
+DB_HOST = os.getenv("DB_HOST", "localhost") 
+if DB_HOST == "db" and os.name == "nt": # 'nt' veut dire Windows
+    DB_HOST = "localhost"
 
-# Création de la chaîne de connexion pour SQLAlchemy
-DB_CONNECTION_STR = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+DB_PORT = os.getenv("DB_PORT", "5432") # Port interne par défaut
+# ATTENTION : Si ton Docker mappe 5433 -> 5432, utilise 5433 en local !
+LOCAL_PORT = "5433" 
 
-# --- Clés API ---
-# Clés nécessaires pour interroger CoinGecko et CryptoPanic.
-COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY") 
-CRYPTOPANIC_API_KEY = os.getenv("CRYPTOPANIC_API_KEY")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+DB_NAME = os.getenv("DB_NAME", "cryptosentinel")
 
-# --- Chemins du Projet ---
-# Définition dynamique des chemins pour que le code fonctionne sur n'importe quelle machine.
-SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPTS_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
+# La chaîne magique
+DB_CONNECTION_STR = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{LOCAL_PORT}/{DB_NAME}"
+
+print(f"🔗 Tentative de connexion sur : {DB_CONNECTION_STR}")
