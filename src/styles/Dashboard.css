@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* Tes styles personnalisés en dessous */
+
+body {
+  margin: 0;
+  background: #0b1220;
+  color: white;
+  font-family: Arial;
+}
+
+.app { display: flex; min-height: 100vh; }
+.main { flex: 1; padding: 30px; }
+
+.sidebar {
+  width: 230px;
+  background: #081521;
+  padding: 20px;
+}
+
+.sidebar a {
+  display: block;
+  margin: 10px 0;
+  color: white;
+  text-decoration: none;
+}
+
+.sidebar a.active {
+  background: #1f4c7a;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.logout { margin-top: 20px; width: 100%; }
+
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.asset-card {
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 14px;
+}
+
+.fake-chart {
+  display: flex;
+  height: 80px;
+  gap: 4px;
+}
+
+.bar { width: 6px; }
+.bar.up { height: 70%; background: #2ecc71; }
+.bar.down { height: 40%; background: #e74c3c; }
+
+.signal.buy { color: #2ecc71; }
+.signal.sell { color: #e74c3c; }
+
+.login-page {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-card input {
+ background-color: white; /* fond blanc */
+  color: black;            /* texte noir */
+  border: 1px solid #ccc;  /* bordure grise */
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
