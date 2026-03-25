@@ -11,6 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Coingecko_script import fetch_and_store_prices
 from Cryptopanic_news import fetch_cryptopanic_news
 from Fear_greed_script import scrape_fear_greed_full
+from sentiment_analysis import analyze_sentiments
 
 # Import du logger
 from logger_config import setup_logger
@@ -44,12 +45,24 @@ def job_fear_greed():
     except Exception as e:
         logger.error(f"Fear & Greed Collection Job Failed: {e}", exc_info=True)
 
+def job_sentiment_analysis():
+    # Tâche : Analyse de sentiment des news
+    logger.info("Starting Sentiment Analysis Job...")
+    try:
+        analyze_sentiments()
+        logger.info("Sentiment Analysis Job Completed.")
+    except Exception as e:
+        logger.error(f"Sentiment Analysis Job Failed: {e}", exc_info=True)
+
+
 def run_all_now():
     # Fonction utilitaire pour tout lancer au démarrage (utile pour tester)
     logger.info("Running all jobs immediately on startup...")
     job_prices()
     job_news()
     job_fear_greed()
+    job_sentiment_analysis()
+
 
 # --- Définition du Planning ---
 # Prix : Toutes les heures
@@ -57,6 +70,9 @@ schedule.every(1).hours.do(job_prices)
 
 # Actualités : Toutes les 8 heures (3 fois par jour)
 schedule.every(8).hours.do(job_news)
+
+# Sentiment des Actualités : Toutes les 1 heures
+schedule.every(1).hours.do(job_sentiment_analysis)
 
 # Indice Fear & Greed : Une fois par jour (24h)
 schedule.every(24).hours.do(job_fear_greed)
@@ -66,11 +82,9 @@ if __name__ == "__main__":
     print("Schedule:")
     print("- Prices: Every 1 hour")
     print("- News: Every 8 hours")
+    print("- Sentiment: Every 1 hour")
     print("- Fear & Greed: Every 24 hours")
     
-    # Voulez-vous lancer toutes les tâches tout de suite au démarrage ?
-    # Décommentez la ligne suivante :
-    # run_all_now()
     
     # Boucle infinie pour vérifier et exécuter les tâches planifiées
     while True:
