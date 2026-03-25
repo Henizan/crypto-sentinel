@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface NewsItem {
   title: string;
@@ -7,15 +8,37 @@ interface NewsItem {
   sentiment: string;
 }
 
+interface OhlcvPoint {
+  time: string;
+  close: number;
+  high: number;
+  low: number;
+  volume: number;
+}
+
+interface FearGreedEntry {
+  value: number;
+  label: string;
+}
+
+interface FearGreedSummary {
+  today: FearGreedEntry | null;
+  yesterday: FearGreedEntry | null;
+  lastWeek: FearGreedEntry | null;
+  lastMonth: FearGreedEntry | null;
+}
+
 const Sentinelles = () => {
   const [activeTab, setActiveTab] = useState("BTC");
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [stats, setStats] = useState({ confidence: "0%" });
+  const [ohlcvData, setOhlcvData] = useState<OhlcvPoint[]>([]);
+  const [fearGreedData, setFearGreedData] = useState<FearGreedSummary | null>(null);
+  const [assetData, setAssetData] = useState<any>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard/stats")
+    fetch("/api/chart/feargreed/summary")
       .then(res => res.json())
-      .then(data => setStats(data))
+      .then(data => setFearGreedData(data))
       .catch(e => console.error(e));
   }, []);
 
@@ -23,6 +46,19 @@ const Sentinelles = () => {
     fetch(`/api/dashboard/news?crypto=${activeTab}`)
       .then(res => res.json())
       .then(data => setNews(data))
+      .catch(e => console.error(e));
+
+    fetch(`/api/chart/ohlcv?crypto=${activeTab}&limit=48`)
+      .then(res => res.json())
+      .then(data => setOhlcvData(data))
+      .catch(e => console.error(e));
+
+    fetch("/api/dashboard/assets")
+      .then(res => res.json())
+      .then(data => {
+        const match = data.find((a: any) => a.pair.startsWith(activeTab));
+        setAssetData(match || null);
+      })
       .catch(e => console.error(e));
   }, [activeTab]);
 
@@ -49,18 +85,90 @@ const Sentinelles = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           <div className="lg:col-span-2 flex flex-col gap-4">
-            <div className="bg-[#0b1220] rounded-xl border border-gray-800 h-64 flex flex-col p-6 relative overflow-hidden">
-               <div className="text-sm font-bold text-gray-400 mb-2">{activeTab}/EUR - Données du marché</div>
-               <div className="flex-1 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-                 <p className="text-gray-500 text-sm">Graphique en cours de développement</p>
-               </div>
+            <div className="bg-[#0b1220] rounded-xl border border-gray-800 flex flex-col p-4" style={{ height: 320 }}>
+               <div className="text-sm font-bold text-gray-400 mb-2">{activeTab}/EUR — Prix de clôture (48 dernières bougies)</div>
+               <ResponsiveContainer width="100%" height="100%">
+                 <AreaChart data={ohlcvData}>
+                   <defs>
+                     <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
+                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                     </linearGradient>
+                   </defs>
+                   <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                   <XAxis dataKey="time" tick={{ fill: "#6b7280", fontSize: 10 }} interval="preserveStartEnd" />
+                   <YAxis domain={["auto", "auto"]} tick={{ fill: "#6b7280", fontSize: 10 }} width={70} />
+                   <Tooltip contentStyle={{ backgroundColor: "#131f33", border: "1px solid #374151", borderRadius: 8 }} labelStyle={{ color: "#9ca3af" }} itemStyle={{ color: "#3b82f6" }} />
+                   <Area type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} fill="url(#colorClose)" name="Close" />
+                 </AreaChart>
+               </ResponsiveContainer>
             </div>
 
-            <div className="bg-[#0b1220] rounded-xl border border-gray-800 h-32 flex flex-col p-4">
-               <div className="text-xs font-bold text-gray-400 mb-2">Historique d'Alertes {activeTab}</div>
-               <div className="flex-1 flex items-center justify-center border border-dashed border-gray-700 rounded-lg">
-                 <p className="text-gray-500 text-xs text-center">En attente des signaux IA</p>
-               </div>
+            <div className="bg-[#0b1220] rounded-xl border border-gray-800 flex flex-col p-4" style={{ height: 160 }}>
+               <div className="text-xs font-bold text-gray-400 mb-2">Fear & Greed Index</div>
+               
+               {fearGreedData ? (
+                 <div className="flex items-center gap-4 flex-1">
+                   <div className="flex flex-col items-center flex-shrink-0">
+                     <div className="relative" style={{ width: 140, height: 80 }}>
+                       <svg viewBox="0 0 180 100" className="w-full h-full">
+                         <path d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#dc2626" strokeWidth="12" strokeLinecap="round" strokeDasharray="62.8 251.3" />
+                         <path d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#f97316" strokeWidth="12" strokeLinecap="round" strokeDasharray="62.8 251.3" strokeDashoffset="-62.8" />
+                         <path d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#eab308" strokeWidth="12" strokeLinecap="round" strokeDasharray="62.8 251.3" strokeDashoffset="-125.6" />
+                         <path d="M 10 90 A 80 80 0 0 1 170 90" fill="none" stroke="#22c55e" strokeWidth="12" strokeLinecap="round" strokeDasharray="62.8 251.3" strokeDashoffset="-188.4" />
+                         {(() => {
+                           const val = fearGreedData.today?.value || 0;
+                           const angle = (val / 100) * 180;
+                           const rad = (angle - 180) * (Math.PI / 180);
+                           const nx = 90 + 65 * Math.cos(rad);
+                           const ny = 90 + 65 * Math.sin(rad);
+                           return <circle cx={nx} cy={ny} r="6" fill="white" stroke="#0b1220" strokeWidth="2" />;
+                         })()}
+                       </svg>
+                       <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
+                         <div className="text-3xl font-bold text-white">{fearGreedData.today?.value ?? "—"}</div>
+                         <div className="text-xs text-gray-400">{fearGreedData.today?.label ?? ""}</div>
+                       </div>
+                     </div>
+                   </div>
+
+                   <div className="border-l border-gray-800 pl-4 flex-1">
+                     <div className="text-xs font-bold text-gray-400 mb-1">Historique</div>
+                     <div className="space-y-1 text-xs">
+                       {[
+                         { label: "Hier", data: fearGreedData.yesterday },
+                         { label: "Semaine", data: fearGreedData.lastWeek },
+                         { label: "Mois", data: fearGreedData.lastMonth },
+                       ].map((row, i) => {
+                         const val = row.data?.value;
+                         const lbl = row.data?.label || "";
+                         let badgeColor = "bg-yellow-900/40 text-yellow-400";
+                         if (val !== undefined) {
+                           if (val <= 24) badgeColor = "bg-red-900/50 text-red-400";
+                           else if (val <= 44) badgeColor = "bg-orange-900/40 text-orange-400";
+                           else if (val <= 55) badgeColor = "bg-yellow-900/40 text-yellow-400";
+                           else if (val <= 75) badgeColor = "bg-lime-900/40 text-lime-400";
+                           else badgeColor = "bg-emerald-900/40 text-emerald-400";
+                         }
+                         return (
+                           <div key={i} className="flex justify-between items-center">
+                             <span className="text-gray-400">{row.label}</span>
+                             {val !== undefined ? (
+                               <span className={`px-3 py-1 rounded-full font-bold text-[10px] ${badgeColor}`}>
+                                 {lbl} {val}
+                               </span>
+                             ) : (
+                               <span className="text-gray-600">—</span>
+                             )}
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">Chargement...</div>
+               )}
             </div>
           </div>
 
@@ -71,33 +179,45 @@ const Sentinelles = () => {
             </div>
             <div className="p-5 space-y-6">
 
-              <div>
-                <h3 className="text-xs text-gray-400 mb-3">Score de confiance</h3>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-20 h-20 flex-shrink-0">
-                    <svg viewBox="0 0 36 36" className="w-full h-full text-emerald-500">
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1f2937" strokeWidth="4" />
-                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${stats.confidence.replace('%', '')}, 100`} />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center font-bold text-lg">
-                      {stats.confidence}
-                    </div>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    <div className="text-gray-300">Probabilité du signal : {stats.confidence}</div>
-                    <div className="text-gray-300">Tendance du signal : <span className="text-emerald-500 font-bold">Haussier</span></div>
-                  </div>
-                </div>
-              </div>
-
 
               <div>
                 <h3 className="text-xs text-gray-400 mb-2">Analyse technique</h3>
-                <ul className="text-xs space-y-1">
-                  <li className="text-emerald-500">RSI en zone d'achat</li>
-                  <li className="text-emerald-500">Croisement MACD confirmé</li>
-                  <li className="text-yellow-500">Volume moyen stable</li>
-                </ul>
+                {assetData ? (
+                  <ul className="text-xs space-y-2">
+                    <li className="flex justify-between">
+                      <span className="text-gray-400">RSI (14)</span>
+                      <span className={parseFloat(assetData.rsi) < 30 ? 'text-emerald-500 font-bold' : (parseFloat(assetData.rsi) > 70 ? 'text-red-500 font-bold' : 'text-gray-300')}>
+                        {assetData.rsi} {parseFloat(assetData.rsi) < 30 ? '(Survente)' : (parseFloat(assetData.rsi) > 70 ? '(Surachat)' : '(Neutre)')}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-400">MACD</span>
+                      <span className={parseFloat(assetData.macd) > 0 ? 'text-emerald-500 font-bold' : 'text-red-500 font-bold'}>
+                        {assetData.macd} {parseFloat(assetData.macd) > 0 ? '(Haussier)' : '(Baissier)'}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-400">Sentiment</span>
+                      <span className={assetData.sentiment === 'positive' ? 'text-emerald-500 font-bold' : (assetData.sentiment === 'negative' ? 'text-red-500 font-bold' : 'text-yellow-500')}>
+                        {assetData.sentiment === 'positive' ? 'Positif' : (assetData.sentiment === 'negative' ? 'Négatif' : 'Neutre')}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-400">Signal</span>
+                      <span className={assetData.signal === 'Buy' ? 'text-emerald-500 font-bold' : (assetData.signal === 'Sell' ? 'text-red-500 font-bold' : 'text-yellow-500 font-bold')}>
+                        {assetData.signal === 'Buy' ? 'Achat' : (assetData.signal === 'Sell' ? 'Vente' : 'Attente')}
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-400">Variation</span>
+                      <span className={parseFloat(assetData.variation) >= 0 ? 'text-emerald-500 font-bold' : 'text-red-500 font-bold'}>
+                        {assetData.variation}%
+                      </span>
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-xs">Chargement...</p>
+                )}
               </div>
 
 
@@ -108,8 +228,8 @@ const Sentinelles = () => {
                      <div className="text-gray-500 text-center py-4">Aucune actualité trouvée.</div>
                   ) : (
                     news.map((item, idx) => {
-                      const isBullish = item.sentiment === 'Bullish' || item.sentiment === 'POSITIF';
-                      const isBearish = item.sentiment === 'Bearish' || item.sentiment === 'NEGATIF';
+                      const isBullish = item.sentiment === 'positive';
+                      const isBearish = item.sentiment === 'negative';
                       const badgeClass = isBullish ? "text-emerald-500" : (isBearish ? "text-red-500" : "text-yellow-500");
                       const badgeText = isBullish ? "[POS]" : (isBearish ? "[NEG]" : "[NEUTRE]");
                       return (

@@ -73,7 +73,7 @@ async def get_dashboard_assets():
                 df = pd.read_sql(f"SELECT close, open_time FROM ohlcv WHERE crypto='{crypto}' ORDER BY open_time ASC", conn)
                 
                 if df.empty:
-                    results.append({"pair": f"{crypto} / EUR", "price": "0", "rsi": "0", "macd": "0", "sentiment": "Neutral", "signal": "Hold"})
+                    results.append({"pair": f"{crypto} / EUR", "price": "0", "rsi": "0", "macd": "0", "sentiment": "neutral", "signal": "Hold", "variation": "0.00"})
                     continue
                 
                 df['rsi'] = calculate_rsi(df['close'])
@@ -84,9 +84,18 @@ async def get_dashboard_assets():
                 rsi_val = latest['rsi'] if not pd.isna(latest['rsi']) else 50
                 macd_val = latest['macd'] if not pd.isna(latest['macd']) else 0
                 
+                variation = 0.0
+                if len(df) >= 2:
+                    prev_price = df.iloc[-2]['close']
+                    if prev_price != 0:
+                        variation = ((price - prev_price) / prev_price) * 100
 
                 signal = "Buy" if rsi_val < 30 else ("Sell" if rsi_val > 70 else "Hold")
-                sentiment = "Bearish" if rsi_val < 45 else ("Bullish" if rsi_val > 55 else "Neutral")
+                
+                crypto_names = {"BTC": "Bitcoin", "ETH": "Ethereum", "SOL": "Solana", "XRP": "Ripple"}
+                name = crypto_names.get(crypto, crypto)
+                sent_df = pd.read_sql(f"SELECT sentiment, count(*) as cnt FROM news WHERE (title ILIKE '%%{name}%%' OR title ILIKE '%%{crypto}%%') AND sentiment IS NOT NULL GROUP BY sentiment ORDER BY cnt DESC LIMIT 1", conn)
+                sentiment = sent_df['sentiment'].iloc[0] if not sent_df.empty else "neutral"
                 
                 results.append({
                     "pair": f"{crypto} / EUR",
@@ -94,7 +103,8 @@ async def get_dashboard_assets():
                     "rsi": f"{rsi_val:.1f}",
                     "macd": f"{macd_val:.2f}",
                     "sentiment": sentiment,
-                    "signal": signal
+                    "signal": signal,
+                    "variation": f"{variation:+.2f}"
                 })
                 
     except Exception as e:
@@ -135,3 +145,84 @@ async def get_dashboard_news(crypto: str = None):
     except Exception as e:
         print(f"Error news: {e}")
         return []
+
+@app.get("/api/chart/ohlcv")
+async def get_chart_ohlcv(crypto: str = "BTC", limit: int = 24, aggregate: str = "hourly"):
+    try:
+        with engine.connect() as conn:
+            if aggregate == "daily":
+                query = f"""
+                    SELECT DATE(open_time) as day,
+                           (ARRAY_AGG(open ORDER BY open_time ASC))[1] as open,
+                           MAX(high) as high,
+                           MIN(low) as low,
+                           (ARRAY_AGG(close ORDER BY open_time DESC))[1] as close,
+                           SUM(volume) as volume
+                    FROM ohlcv
+                    WHERE crypto='{crypto}'
+                    GROUP BY DATE(open_time)
+                    ORDER BY day DESC
+                    LIMIT {limit}
+                """
+                df = pd.read_sql(query, conn)
+                df = df.sort_values("day")
+                return [{
+                    "time": row["day"].strftime("%d/%m"),
+                    "open": round(float(row["open"]), 2),
+                    "high": round(float(row["high"]), 2),
+                    "low": round(float(row["low"]), 2),
+                    "close": round(float(row["close"]), 2),
+                    "volume": round(float(row["volume"]), 2)
+                } for _, row in df.iterrows()]
+            else:
+                df = pd.read_sql(f"SELECT open_time, open, high, low, close, volume FROM ohlcv WHERE crypto='{crypto}' ORDER BY open_time DESC LIMIT {limit}", conn)
+                df = df.sort_values("open_time")
+                return [{
+                    "time": row["open_time"].strftime("%d/%m %Hh"),
+                    "open": round(float(row["open"]), 2),
+                    "high": round(float(row["high"]), 2),
+                    "low": round(float(row["low"]), 2),
+                    "close": round(float(row["close"]), 2),
+                    "volume": round(float(row["volume"]), 2)
+                } for _, row in df.iterrows()]
+    except Exception as e:
+        print(f"Error ohlcv chart: {e}")
+        return []
+
+@app.get("/api/chart/feargreed")
+async def get_chart_feargreed(limit: int = 30):
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(f"SELECT date, value, classification FROM fear_greed ORDER BY date DESC LIMIT {limit}", conn)
+        df = df.sort_values("date")
+        return [{
+            "date": row["date"].strftime("%d/%m"),
+            "value": int(row["value"]),
+            "label": row["classification"]
+        } for _, row in df.iterrows()]
+    except Exception as e:
+        print(f"Error feargreed chart: {e}")
+        return []
+
+@app.get("/api/chart/feargreed/summary")
+async def get_feargreed_summary():
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql("SELECT date, value, classification FROM fear_greed ORDER BY date DESC LIMIT 31", conn)
+        if df.empty:
+            return {"today": None, "yesterday": None, "lastWeek": None, "lastMonth": None}
+        
+        df = df.sort_values("date", ascending=False).reset_index(drop=True)
+        
+        def entry(row):
+            return {"value": int(row["value"]), "label": row["classification"]}
+        
+        today = entry(df.iloc[0]) if len(df) > 0 else None
+        yesterday = entry(df.iloc[1]) if len(df) > 1 else None
+        last_week = entry(df.iloc[7]) if len(df) > 7 else None
+        last_month = entry(df.iloc[30]) if len(df) > 30 else None
+        
+        return {"today": today, "yesterday": yesterday, "lastWeek": last_week, "lastMonth": last_month}
+    except Exception as e:
+        print(f"Error feargreed summary: {e}")
+        return {"today": None, "yesterday": None, "lastWeek": None, "lastMonth": None}
