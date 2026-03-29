@@ -1,64 +1,36 @@
-import psycopg2
 import pandas as pd
 import torch
+import torch.nn as nn
 import os
 
-# trvail hugo
-DB_CONFIG = {
-    "dbname": "cryptosentinel",
-    "user": "postgres",
-    "password": "password",
-    "host": "cryptosentinel", # service Docker
-    "port": "5432:5432"
-}
+class CryptoAutoEncoder(nn.Module):
+    def __init__(self, input_dim):
+        super(CryptoAutoEncoder, self).__init__()
+        self.encoder = nn.Sequential(nn.Linear(input_dim, 8), nn.ReLU(), nn.Linear(8, 4))
+        self.decoder = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, input_dim))
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
 
-def get_latest_data(symbol: str, n_rows: int = 100):
-    """
-    Récupère les $n$ dernières lignes pour un actif spécifique
-    depuis la base de données TimescaleDB de Hugo.
-    """
+def get_latest_data(symbol, n_rows=1):
+    file_path = "data_all.csv" 
     try:
-        # Connexion DB 
-        conn = psycopg2.connect(**DB_CONFIG)
-        
-        # Requete SQL
-        # "time DESC" pour dernieres et réordonne
-        query = f"""
-        SELECT time, price, volume, rsi, macd 
-        FROM crypto_data 
-        WHERE symbol = '{symbol}' 
-        ORDER BY time DESC 
-        LIMIT {n_rows};
-        """
-        
-        # DF pandas
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        
-        # ordre chronologique 
-        df = df.iloc[::-1]
-        
-        return df
+        if not os.path.exists(file_path):
+            return None
 
+        df = pd.read_csv(file_path, encoding='latin-1')
+        
+        # Nettoyage des colonnes et de la colonne 'crypto'
+        df.columns = df.columns.str.strip().str.replace('"', '')
+        df['crypto'] = df['crypto'].astype(str).str.strip().str.replace('"', '')
+
+        # Filtrage dynamique selon le symbole demandé
+        df_filtered = df[df['crypto'].str.upper() == symbol.upper()]
+        
+        if df_filtered.empty:
+            print(f"[-] {symbol} non trouvé dans le fichier.")
+            return None
+            
+        return df_filtered.tail(n_rows)
     except Exception as e:
-        print(f"Erreur de connexion à la DB : {e}")
+        print(f"[-] Erreur lecture {symbol} : {e}")
         return None
-
-def prepare_tensors(df):
-    """
-    Transforme les données Pandas en Tenseurs utilisables par 
-    le TCN et l'AutoEncoder[cite: 68].
-    """
-    
-    features = df[['price', 'volume', 'rsi', 'macd']].values
-    
-    # Conversion en tenseur PyTorch et shape attendue pour un TCN : (batch, channels, sequence_length)
-    tensor_data = torch.tensor(features, dtype=torch.float32).unsqueeze(0).permute(0, 2, 1)
-    
-    return tensor_data
-
-if __name__ == "__main__":
-    data = get_latest_data("BTC/USDT", n_rows=50)
-    if data is not None:
-        inputs = prepare_tensors(data)
-        print(f"Tenseur prêt pour l'IA : {inputs.shape}")
