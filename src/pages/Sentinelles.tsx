@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { useData } from "../context/DataContext";
 
 interface NewsItem {
   title: string;
@@ -16,33 +17,17 @@ interface OhlcvPoint {
   volume: number;
 }
 
-interface FearGreedEntry {
-  value: number;
-  label: string;
-}
-
-interface FearGreedSummary {
-  today: FearGreedEntry | null;
-  yesterday: FearGreedEntry | null;
-  lastWeek: FearGreedEntry | null;
-  lastMonth: FearGreedEntry | null;
-}
-
 const Sentinelles = () => {
+  const { assets, fearGreedSummary: fearGreedData } = useData();
   const [activeTab, setActiveTab] = useState("BTC");
   const [news, setNews] = useState<NewsItem[]>([]);
   const [ohlcvData, setOhlcvData] = useState<OhlcvPoint[]>([]);
-  const [fearGreedData, setFearGreedData] = useState<FearGreedSummary | null>(null);
-  const [assetData, setAssetData] = useState<any>(null);
+
+  // Seul le assetData filtré par tab est dérivé du context (pas de fetch)
+  const assetData = assets.find((a: any) => a.pair.startsWith(activeTab)) || null;
 
   useEffect(() => {
-    fetch("/api/chart/feargreed/summary")
-      .then(res => res.json())
-      .then(data => setFearGreedData(data))
-      .catch(e => console.error(e));
-  }, []);
-
-  useEffect(() => {
+    // Seuls les news et charts dépendent du tab actif → fetch local
     fetch(`/api/dashboard/news?crypto=${activeTab}`)
       .then(res => res.json())
       .then(data => setNews(data))
@@ -51,14 +36,6 @@ const Sentinelles = () => {
     fetch(`/api/chart/ohlcv?crypto=${activeTab}&limit=48`)
       .then(res => res.json())
       .then(data => setOhlcvData(data))
-      .catch(e => console.error(e));
-
-    fetch("/api/dashboard/assets")
-      .then(res => res.json())
-      .then(data => {
-        const match = data.find((a: any) => a.pair.startsWith(activeTab));
-        setAssetData(match || null);
-      })
       .catch(e => console.error(e));
   }, [activeTab]);
 
@@ -250,59 +227,7 @@ const Sentinelles = () => {
         </div>
 
 
-        <div className="mt-8 bg-[#0b1220] rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 text-center font-bold text-sm">
-            Positions et historique
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#131f33] text-gray-400 border-b border-gray-800">
-                <tr>
-                  <th className="px-6 py-3 font-normal">Date-Heure</th>
-                  <th className="px-6 py-3 font-normal">Type(signal) - Paire</th>
-                  <th className="px-6 py-3 font-normal text-right">Prix d'Entrée</th>
-                  <th className="px-6 py-3 font-normal text-right">Prix Actuel/Sortie</th>
-                  <th className="px-6 py-3 font-normal text-right">PnL (Profit & Loss)</th>
-                  <th className="px-6 py-3 font-normal">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                <tr className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">30 Nov - 14:02</td>
-                  <td className="px-6 py-4 font-bold text-emerald-500">LONG(x5) <span className="text-gray-400 font-normal">- BTC/EUR</span></td>
-                  <td className="px-6 py-4 text-right">€71,500</td>
-                  <td className="px-6 py-4 text-right">€72,192</td>
-                  <td className="px-6 py-4 text-right font-bold text-emerald-500">+ €3,460 (+4.8%)</td>
-                  <td className="px-6 py-4 text-gray-400">EN COURS...</td>
-                </tr>
-                <tr className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">29 Nov - 09:30</td>
-                  <td className="px-6 py-4 font-bold text-emerald-500">LONG(x10) <span className="text-gray-400 font-normal">- ETH/EUR</span></td>
-                  <td className="px-6 py-4 text-right">€2,380</td>
-                  <td className="px-6 py-4 text-right">€2,434</td>
-                  <td className="px-6 py-4 text-right font-bold text-emerald-500">+ €540.00 (+22.6%)</td>
-                  <td className="px-6 py-4 text-gray-500">CLÔTURÉ</td>
-                </tr>
-                <tr className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">28 Nov - 11:15</td>
-                  <td className="px-6 py-4 font-bold text-emerald-500">LONG(x5) <span className="text-gray-400 font-normal">- XRP/EUR</span></td>
-                  <td className="px-6 py-4 text-right">€2.150</td>
-                  <td className="px-6 py-4 text-right">€2.050</td>
-                  <td className="px-6 py-4 text-right font-bold text-red-500">- €120.00 (-4.6%)</td>
-                  <td className="px-6 py-4 text-gray-500">CLÔTURÉ</td>
-                </tr>
-                <tr className="hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">27 Nov - 16:45</td>
-                  <td className="px-6 py-4 font-bold text-red-500">SHORT(x3) <span className="text-gray-400 font-normal">- SOL/EUR</span></td>
-                  <td className="px-6 py-4 text-right">€130.50</td>
-                  <td className="px-6 py-4 text-right">€131.41</td>
-                  <td className="px-6 py-4 text-right font-bold text-red-500">- €452.00 (-7%)</td>
-                  <td className="px-6 py-4 text-gray-500">CLÔTURÉ</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+
       </div>
     </div>
   );

@@ -1,23 +1,13 @@
 import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-interface AssetData {
-  pair: string;
-  price: string;
-  rsi: string;
-  macd: string;
-  sentiment: string;
-  signal: string;
-  variation: string;
-}
+import { useData } from "../context/DataContext";
 
 interface ChartPoint {
   time: string;
   close: number;
 }
 
-const REFRESH_INTERVAL = 3600000;
 const TIMEFRAMES: Record<string, { limit: number; aggregate: string }> = {
   "Jour": { limit: 24, aggregate: "hourly" },
   "Semaine": { limit: 168, aggregate: "hourly" },
@@ -26,29 +16,14 @@ const TIMEFRAMES: Record<string, { limit: number; aggregate: string }> = {
 };
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({ btcPrice: "", marketCap: "", confidence: "", updateTime: "" });
-  const [assets, setAssets] = useState<AssetData[]>([]);
-  const [lastRefresh, setLastRefresh] = useState("");
-  const [countdown, setCountdown] = useState(REFRESH_INTERVAL / 1000);
+  const { stats, assets, aiData, lastRefresh, countdown } = useData();
   const [chartData, setChartData] = useState<Record<string, ChartPoint[]>>({});
   const [selectedTf, setSelectedTf] = useState<Record<string, string>>({});
 
+  const finbertEnabled = JSON.parse(localStorage.getItem("config_finbert") || "true");
+  const autoEncoderEnabled = JSON.parse(localStorage.getItem("config_autoencoder") || "true");
+
   const cryptos = ["BTC", "ETH", "SOL", "XRP"];
-
-  const fetchData = () => {
-    fetch("/api/dashboard/stats")
-      .then((res) => res.json())
-      .then((data) => setStats(data))
-      .catch((err) => console.error(err));
-
-    fetch("/api/dashboard/assets")
-      .then((res) => res.json())
-      .then((data) => setAssets(data))
-      .catch((err) => console.error(err));
-
-    setLastRefresh(new Date().toLocaleTimeString("fr-FR"));
-    setCountdown(REFRESH_INTERVAL / 1000);
-  };
 
   const fetchChart = (crypto: string, tf: string) => {
     const config = TIMEFRAMES[tf] || TIMEFRAMES["Jour"];
@@ -59,20 +34,13 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
-    cryptos.forEach((c) => fetchChart(c, "Jour"));
-    const initTf: Record<string, string> = {};
-    cryptos.forEach((c) => (initTf[c] = "Jour"));
-    setSelectedTf(initTf);
-
-    const dataInterval = setInterval(fetchData, REFRESH_INTERVAL);
-    const tickInterval = setInterval(() => {
-      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => {
-      clearInterval(dataInterval);
-      clearInterval(tickInterval);
-    };
+    // Charts are page-specific, fetch on mount only if not already loaded
+    if (Object.keys(chartData).length === 0) {
+      cryptos.forEach((c) => fetchChart(c, "Jour"));
+      const initTf: Record<string, string> = {};
+      cryptos.forEach((c) => (initTf[c] = "Jour"));
+      setSelectedTf(initTf);
+    }
   }, []);
 
   const handleTfChange = (crypto: string, tf: string) => {
@@ -125,7 +93,7 @@ const Dashboard = () => {
           const crypto = asset.pair.split(" ")[0];
           const isBuy = asset.signal !== "Sell" && asset.signal !== "Hold";
           const isHold = asset.signal === "Hold";
-          const currentTf = selectedTf[crypto] || "24h";
+          const currentTf = selectedTf[crypto] || "Jour";
           const points = chartData[crypto] || [];
           
           let signalText = "AUCUN SIGNAL DÉTECTÉ";
@@ -205,16 +173,34 @@ const Dashboard = () => {
 
                   <div className="w-full text-right">
                     <div className="text-xs text-gray-400 mb-1">Sentiments</div>
-                    <div className={`text-[10px] font-bold px-3 py-1 rounded-full inline-block ${asset.sentiment === 'positive' ? 'bg-emerald-900/50 text-emerald-500' : (asset.sentiment === 'negative' ? 'bg-red-900/50 text-red-500' : 'bg-gray-800 text-gray-300')}`}>
-                      {asset.sentiment.toUpperCase()}
-                    </div>
+                    {finbertEnabled ? (
+                      <div className={`text-[10px] font-bold px-3 py-1 rounded-full inline-block ${asset.sentiment === 'positive' ? 'bg-emerald-900/50 text-emerald-500' : (asset.sentiment === 'negative' ? 'bg-red-900/50 text-red-500' : 'bg-gray-800 text-gray-300')}`}>
+                        {asset.sentiment.toUpperCase()}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] font-bold px-3 py-1 rounded-full inline-block bg-gray-800 text-gray-500">
+                        DÉSACTIVÉ
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* Signal classique */}
               <div className={`w-full py-2 rounded-xl text-center text-xs font-bold tracking-widest ${signalClass}`}>
                 {signalText}
               </div>
+
+              {/* Signal IA AutoEncoder */}
+              {autoEncoderEnabled && aiData[crypto] && (
+                <div className={`w-full py-2 mt-2 rounded-xl text-center text-xs font-bold tracking-widest ${
+                  aiData[crypto].signal === 'ANOMALIE'
+                    ? 'bg-orange-900/40 text-orange-400 border border-orange-800/50'
+                    : 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50'
+                }`}>
+                  🤖 IA : {aiData[crypto].signal} — {aiData[crypto].interpretation}
+                </div>
+              )}
             </div>
           );
         })}

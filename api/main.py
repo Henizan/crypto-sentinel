@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime
+import torch
+import joblib
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -226,3 +228,94 @@ async def get_feargreed_summary():
     except Exception as e:
         print(f"Error feargreed summary: {e}")
         return {"today": None, "yesterday": None, "lastWeek": None, "lastMonth": None}
+
+
+# ============================================================
+# SECTION IA - Analyse par AutoEncoder (importé de la branche robin)
+# ============================================================
+
+from models.inference import get_latest_data, CryptoAutoEncoder
+
+def analyze_crypto(symbol: str):
+    """
+    Charge le modèle AutoEncoder entraîné pour une crypto donnée,
+    puis calcule la "reconstruction loss" sur les dernières données OHLCV.
+    
+    - Si la loss est élevée (> 0.05) → le marché se comporte de façon ANORMALE
+    - Si la loss est faible → le marché est STABLE
+    
+    C'est le principe de la détection d'anomalies par AutoEncoder :
+    le modèle apprend à reconstruire des données "normales",
+    donc une mauvaise reconstruction = comportement inhabituel.
+    """
+    try:
+        model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                   f"models/saved/autoencoder_{symbol}.pth")
+        scaler_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                    f"models/saved/scaler_{symbol}.pkl")
+        
+        if not os.path.exists(model_path):
+            print(f"[-] Modèle introuvable : {model_path}")
+            return None
+
+        # Charger le modèle AutoEncoder
+        model = CryptoAutoEncoder(input_dim=4)
+        model.load_state_dict(torch.load(model_path, map_location='cpu', weights_only=True))
+        model.eval()
+        
+        # Charger le scaler (normalisation Min-Max)
+        scaler = joblib.load(scaler_path)
+        
+        # Récupérer les dernières données depuis PostgreSQL
+        df = get_latest_data(symbol, n_rows=1, use_db=True)
+        if df is None:
+            return None
+        
+        # Préparation : nettoyage + normalisation
+        features = df[['close', 'volume', 'high', 'low']]
+        features = features.replace('"', '', regex=True).astype(float)
+        scaled = scaler.transform(features)
+        tensor = torch.tensor(scaled, dtype=torch.float32)
+        
+        # Inférence : on passe les données dans l'AutoEncoder
+        with torch.no_grad():
+            reconstructed = model(tensor)
+            loss = torch.nn.functional.mse_loss(reconstructed, tensor).item()
+        
+        # Interprétation du résultat
+        price = float(df['close'].iloc[-1])
+        is_anomaly = loss > 0.05
+        
+        return {
+            "price": f"{price:.2f} €",
+            "signal": "ANOMALIE" if is_anomaly else "STABLE",
+            "sentiment": "Bearish" if is_anomaly else "Bullish",
+            "loss": round(loss, 6),
+            "interpretation": "Comportement de marché inhabituel détecté" if is_anomaly else "Marché dans les normes"
+        }
+    except Exception as e:
+        print(f"[-] Erreur analyse IA {symbol} : {e}")
+        return None
+
+
+@app.get("/api/dashboard/ai-analysis")
+async def get_ai_analysis():
+    """
+    Endpoint qui retourne l'analyse IA (AutoEncoder) pour chaque crypto.
+    Détecte les anomalies de marché en comparant les données actuelles
+    avec ce que le modèle a appris comme "normal".
+    """
+    results = {}
+    for symbol in ["BTC", "ETH", "SOL", "XRP"]:
+        analysis = analyze_crypto(symbol)
+        if analysis:
+            results[symbol] = analysis
+        else:
+            results[symbol] = {
+                "price": "Indisponible",
+                "signal": "Erreur",
+                "sentiment": "N/A",
+                "loss": None,
+                "interpretation": "Modèle non disponible ou données manquantes"
+            }
+    return results

@@ -4,7 +4,6 @@ import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Sentinelles from "./pages/Sentinelles"
 import Config from "./pages/Config"
-import Profile from "./pages/Profile"
 
 function App() {
   return (
@@ -19,7 +18,6 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/sentinelles" element={<Sentinelles />} />
               <Route path="/config" element={<Config />} />
-              <Route path="/profile" element={<Profile />} />
             </Routes>
           </MainLayout>
         }

@@ -1,0 +1,34 @@
+{
+  "BTC": {
+    "threshold": 0.05793892182409764,
+    "mean_loss": 0.018174471051651927,
+    "std_loss": 0.02100110610857682,
+    "max_loss": 0.1736302226781845,
+    "percentile_used": 95,
+    "n_samples": 5000
+  },
+  "ETH": {
+    "threshold": 0.0524852441623807,
+    "mean_loss": 0.015571010778428172,
+    "std_loss": 0.019292865888743096,
+    "max_loss": 0.13781282305717468,
+    "percentile_used": 95,
+    "n_samples": 5000
+  },
+  "SOL": {
+    "threshold": 0.10052887722849846,
+    "mean_loss": 0.03932206735737816,
+    "std_loss": 0.035807251578295084,
+    "max_loss": 0.2850365936756134,
+    "percentile_used": 95,
+    "n_samples": 3186
+  },
+  "XRP": {
+    "threshold": null,
+    "mean_loss": null,
+    "std_loss": null,
+    "max_loss": null,
+    "percentile_used": 95,
+    "n_samples": 5000
+  }
+}

@@ -6,3 +6,6 @@ python-dotenv
 schedule
 fastapi
 uvicorn
+torch
+joblib
+scikit-learn

@@ -6,7 +6,7 @@ body {
   margin: 0;
   background: #0b1220;
   color: white;
-  font-family: Arial;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .app { display: flex; min-height: 100vh; }
@@ -16,22 +16,39 @@ body {
   width: 230px;
   background: #081521;
   padding: 20px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sidebar a {
   display: block;
-  margin: 10px 0;
-  color: white;
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.6);
   text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+
+.sidebar a:hover {
+  color: white;
+  background: rgba(255,255,255,0.05);
 }
 
 .sidebar a.active {
-  background: #1f4c7a;
-  padding: 8px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #1a3a5c, #1f4c7a);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(31, 76, 122, 0.3);
 }
 
-.logout { margin-top: 20px; width: 100%; }
 
 .assets-grid {
   display: grid;
